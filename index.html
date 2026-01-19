@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Distribution Genealogy</title>
+    <style>
+        :root {
+            /* Premium Dark Theme Palette */
+            --bg-body: #0f172a;
+            /* Deep slate/navy */
+            --bg-sidebar: #1e293b;
+            /* Lighter slate */
+            --bg-card: #ffffff;
+            /* White for visual contrast of data */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            /* Sky blue */
+            --accent-hover: #0ea5e9;
+            --border: #334155;
+            --nav-item-hover: #334155;
+            --nav-item-active: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 60px;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* --- Layout Container --- */
+        .layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+            flex-shrink: 0;
+        }
+
+        .nav-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 0 1.5rem 0.5rem;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: var(--nav-item-hover);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--text-main);
+            border-left-color: var(--accent);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* --- Main Content Area --- */
+        .content {
+            flex: 1;
+            position: relative;
+            background: #000;
+            /* Backdrop for the views */
+            overflow: hidden;
+        }
+
+        /* Tab Views */
+        .view-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            visibility: hidden;
+            /* Use visibility instead of display:none to allow clearer sizing in some cases, but layout usually wants display:none */
+            display: none;
+            flex-direction: column;
+            background-color: var(--bg-card);
+            /* White canvas for readability */
+        }
+
+        .view-panel.active {
+            display: flex;
+            visibility: visible;
+        }
+
+        /* Iframes */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* --- SVG Viewer Specifics --- */
+        #viewport {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            /* Explicit white background for SVG */
+            cursor: grab;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #viewport:active {
+            cursor: grabbing;
+        }
+
+        #map-container {
+            transform-origin: 0 0;
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+
+        .map-image {
+            display: block;
+            pointer-events: none;
+            /* Let clicks pass to viewport for drag */
+            max-width: none;
+            /* Ensure no CSS constraint shrinks natural size */
+        }
+
+        /* Floating Controls for SVG */
+        .controls {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 6px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+        }
+
+        .btn-control {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-control:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-control svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>Linux Distro Genealogy</h1>
+            <span class="subtitle">Interactive Data Explorer</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Data from Wikidata
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="nav-label">Visualizations</div>
+
+            <div class="nav-item active" onclick="switchTab('graph')">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                </svg>
+                Network Graph
+            </div>
+
+            <div class="nav-item" onclick="switchTab('timeline')">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                </svg>
+                Timeline
+            </div>
+
+            <div class="nav-item" onclick="switchTab('map')">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z" />
+                </svg>
+                Complete Genealogy Map
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content">
+
+            <!-- View 1: Network Graph -->
+            <div id="view-graph" class="view-panel active">
+                <iframe
+                    src="https://query.wikidata.org/embed.html#%23defaultView%3AGraph%0ASELECT%20%3Finstance_of%20%3Finstance_ofLabel%20%3Fpackage_management_system%20%3Fpackage_management_systemLabel%20%3Flogo_image%20%3Fsoftware_version_identifier%20%3Finception%20WHERE%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22%5BAUTO_LANGUAGE%5D%2Cmul%2Cen%22.%20%7D%0A%20%20%3Finstance_of%20wdt%3AP31%20wd%3AQ131669.%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP154%20%3Flogo_image.%20%7D%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP348%20%3Fsoftware_version_identifier.%20%7D%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP571%20%3Finception.%20%7D%0A%7D%0ALIMIT%20100"
+                    referrerpolicy="origin" sandbox="allow-scripts allow-same-origin allow-popups">
+                </iframe>
+            </div>
+
+            <!-- View 2: Timeline -->
+            <div id="view-timeline" class="view-panel">
+                <iframe
+                    src="https://query.wikidata.org/embed.html#%23defaultView%3ATimeline%0ASELECT%20%3Finstance_of%20%3Finstance_ofLabel%20%3Fpackage_management_system%20%3Fpackage_management_systemLabel%20%3Flogo_image%20%3Fsoftware_version_identifier%20%3Finception%20WHERE%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22%5BAUTO_LANGUAGE%5D%2Cmul%2Cen%22.%20%7D%0A%20%20%3Finstance_of%20wdt%3AP31%20wd%3AQ131669.%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP154%20%3Flogo_image.%20%7D%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP348%20%3Fsoftware_version_identifier.%20%7D%0A%20%20OPTIONAL%20%7B%20%3Finstance_of%20wdt%3AP571%20%3Finception.%20%7D%0A%7D%0ALIMIT%20100"
+                    referrerpolicy="origin" sandbox="allow-scripts allow-same-origin allow-popups">
+                </iframe>
+            </div>
+
+            <!-- View 3: Complete Map -->
+            <div id="view-map" class="view-panel">
+                <div id="viewport">
+                    <div id="map-container">
+                        <img src="vis.svg" alt="Linux Genealogy" class="map-image" id="mapImage">
+                    </div>
+
+                    <div class="controls">
+                        <button class="btn-control" id="zoomIn" title="Zoom In">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                            </svg>
+                        </button>
+                        <button class="btn-control" id="zoomOut" title="Zoom Out">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 13H5v-2h14v2z" />
+                            </svg>
+                        </button>
+                        <button class="btn-control" id="reset" title="Reset View">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Shared State ---
+        let mapInitialized = false;
+
+        // --- Navigation Logic ---
+        function switchTab(tabName) {
+            // Update UI
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view-panel').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + tabName).classList.add('active');
+
+            // Highlight current nav
+            const items = document.querySelectorAll('.nav-item');
+            if (tabName === 'graph') items[0].classList.add('active');
+            if (tabName === 'timeline') items[1].classList.add('active');
+            if (tabName === 'map') items[2].classList.add('active');
+
+            // Handle Map Initialization/Recenter on tab switch
+            if (tabName === 'map') {
+                // Wait for layout paint
+                setTimeout(() => {
+                    centerMap();
+                }, 10);
+            }
+        }
+
+        // --- Pan & Zoom Logic ---
+        const viewport = document.getElementById('viewport');
+        const container = document.getElementById('map-container');
+        const img = document.getElementById('mapImage');
+
+        let scale = 1;
+        let pPanning = false;
+        let pointX = 0;
+        let pointY = 0;
+        let startX = 0;
+        let startY = 0;
+
+        const updateTransform = () => {
+            container.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+        };
+
+        // Core Centering Function
+        function centerMap() {
+            // Get dimensions
+            const vW = viewport.clientWidth;
+            const vH = viewport.clientHeight;
+            // Fallback to SVG attributes if natural size isn't reported yet
+            const iW = img.naturalWidth || 1005;
+            const iH = img.naturalHeight || 6000;
+
+            if (vW === 0) return; // Still hidden
+
+            // Calculate "Fit Width" scale, with max cap
+            // We want it to fill roughly 90% of screen width so text is readable
+            let targetScale = (vW * 0.9) / iW;
+
+            // Clamp scale: reasonable min/max
+            if (targetScale > 1.2) targetScale = 1.2;
+            if (targetScale < 0.1) targetScale = 0.1;
+
+            scale = targetScale;
+            // Center horizontally
+            pointX = (vW - iW * scale) / 2;
+            pointY = 20; // Top padding
+
+            updateTransform();
+            mapInitialized = true;
+        }
+
+        // Listeners for load
+        img.onload = () => {
+            // Only center if we are effectively visible, otherwise wait for tab switch
+            if (viewport.clientWidth > 0) {
+                centerMap();
+            }
+        };
+
+        // Window resize handling
+        window.addEventListener('resize', () => {
+            if (document.getElementById('view-map').classList.contains('active')) {
+                // Optional: Recentering on resize can be annoying if user panned away.
+                // We'll leave it manual for now or just ensure basic bounds.
+            }
+        });
+
+        // Controls
+        document.getElementById('zoomIn').onclick = () => { scale *= 1.2; updateTransform(); };
+        document.getElementById('zoomOut').onclick = () => { scale /= 1.2; updateTransform(); };
+        document.getElementById('reset').onclick = centerMap;
+
+        // Interaction
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.controls')) return;
+            pPanning = true;
+            startX = e.clientX - pointX;
+            startY = e.clientY - pointY;
+            viewport.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mouseup', () => { pPanning = false; viewport.style.cursor = 'grab'; });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!pPanning) return;
+            e.preventDefault();
+            pointX = e.clientX - startX;
+            pointY = e.clientY - startY;
+            updateTransform();
+        });
+
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const xs = (e.clientX - pointX) / scale;
+            const ys = (e.clientY - pointY) / scale;
+            const delta = -Math.sign(e.deltaY);
+            if (delta > 0) scale *= 1.1; else scale /= 1.1;
+            pointX = e.clientX - xs * scale;
+            pointY = e.clientY - ys * scale;
+            updateTransform();
+        }, { passive: false });
+
+    </script>
+</body>
+
+</html>
